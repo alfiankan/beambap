@@ -1,0 +1,29 @@
+[package]
+name = "medusa"
+version = "0.1.0"
+edition = "2021"
+authors = ["alfiankan <alfiankan19@gmail.com>"]
+
+[workspace]
+resolver = "2"
+members = [ "compiler","vm"]
+
+[workspace.dependencies]
+rustpython-literal = { git = "https://github.com/alfiankan/Parser.git", version = "0.3.1", rev = "51b5f80ae3080dfec2db815a299a69873fb9ca65" }
+rustpython-parser-core = { git = "https://github.com/alfiankan/Parser.git", version = "0.3.1", rev = "51b5f80ae3080dfec2db815a299a69873fb9ca65" }
+rustpython-parser = { git = "https://github.com/alfiankan/Parser.git", version = "0.3.1", rev = "51b5f80ae3080dfec2db815a299a69873fb9ca65" }
+rustpython-ast = { git = "https://github.com/alfiankan/Parser.git", version = "0.3.1", rev = "51b5f80ae3080dfec2db815a299a69873fb9ca65" }
+rustpython-format = { git = "https://github.com/alfiankan/Parser.git", version = "0.3.1", rev = "51b5f80ae3080dfec2db815a299a69873fb9ca65" }
+rayon = "1.10"
+medusa-compiler = { path = "compiler" }
+medusa-vm = { path = "vm" }
+
+
+[dependencies]
+rustpython-literal = { workspace = true }
+rustpython-parser-core = { workspace = true }
+rustpython-parser = { workspace = true }
+rustpython-ast = { workspace = true }
+rustpython-format = { workspace = true }
+medusa-compiler = { workspace = true  }
+medusa-vm = { workspace = true  }
