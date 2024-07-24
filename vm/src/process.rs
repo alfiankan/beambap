@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::io::Read;
 use std::ops::Deref;
 use crate::object::{MedusaObj, DataType};
 use crate::ops::{OPCODE, OpcodeArgType};
@@ -78,36 +79,76 @@ impl MedusaProcessManager {
 
     fn examine(&mut self) {
         let mp = self.processes_regs.get_mut("add iter loop").unwrap();
-        println!("Register: {:?}", mp.register);
-        println!("DO {:?}", mp.bytecode.get(mp.pc as usize));
+        println!("{:?} DO {:?}", mp.pc, mp.bytecode.get(mp.pc as usize));
 
         let line_code = mp.bytecode.get(mp.pc as usize).unwrap();
 
         if line_code[0].i == Some(OPCODE::LOAD_CONST as i32) {
             let op_arg = line_code[1].i.unwrap();
-            let heap_legth = mp.heap.len() + 1;
-            mp.heap.insert(heap_legth as u32, MedusaObj{
-                label: op_arg.to_string(),
-                data_type: DataType::String,
-                value: op_arg.to_string().into_bytes().into_boxed_slice(),
-            });
-            mp.stack.insert(op_arg.to_string(), heap_legth as u32);
-            mp.register.push(heap_legth as i32);
+            mp.register.push(op_arg);
         }
 
         if line_code[0].i == Some(OPCODE::STORE as i32) {
-            let heap_legth = mp.heap.len() + 1;
-            mp.heap.insert(heap_legth as u32, MedusaObj{
-                label: line_code[1].label.clone().unwrap(),
-                data_type: DataType::String,
-                value: line_code[1].label.clone().unwrap().into_bytes().into_boxed_slice(),
-            });
-            mp.stack.insert(line_code[1].label.clone().unwrap(), heap_legth as u32);
+            let op_arg = mp.register.pop().unwrap();
+            println!("STORE TO MEM {:?}", op_arg);
+            if mp.stack.contains_key(&line_code[1].label.clone().unwrap()) {
+                println!("OBJ EXIST");
+                // change value
+                let pointer = mp.stack.get(&line_code[1].label.clone().unwrap()).unwrap();
+                mp.heap.insert(*pointer, MedusaObj {
+                    label: line_code[1].label.clone().unwrap(),
+                    data_type: DataType::String,
+                    value: op_arg.to_le_bytes().into(),
+                });
+            } else {
+                let heap_legth = mp.heap.len() + 1;
+                mp.heap.insert(heap_legth as u32, MedusaObj {
+                    label: line_code[1].label.clone().unwrap(),
+                    data_type: DataType::String,
+                    value: op_arg.to_le_bytes().into(),
+                });
+                mp.stack.insert(line_code[1].label.clone().unwrap(), heap_legth as u32);
+            }
         }
 
         if line_code[0].i == Some(OPCODE::LOAD as i32) {
+            let pointer = mp.stack.get(&line_code[1].label.clone().unwrap()).unwrap();
+            let mobj = mp.heap.get(pointer).unwrap();
+            let byte_slice: &[u8] = &mobj.value.clone();
+            let array: [u8; 4] = byte_slice.try_into().unwrap();
+            println!("LOAD {:?} to REG", u32::from_le_bytes( array) as i32);
+            mp.register.push(u32::from_le_bytes( array) as i32);
         }
+
+
+        if line_code[0].i == Some(OPCODE::BINARY_OP as i32) {
+            if line_code[1].label.clone().unwrap() == "+" {
+                let arg1 = mp.register.pop().unwrap();
+                let arg2 = mp.register.pop().unwrap();
+                mp.register.push(arg1 + arg2);
+                println!("BINOP {:?} {:?} {:?}", arg1, line_code[1].label.clone().unwrap(), arg2);
+            }
+        }
+
+        if line_code[0].i == Some(OPCODE::LOGICAL_OP as i32) {
+            if line_code[1].label.clone().unwrap() == ">" {
+                let arg1 = mp.register.pop().unwrap();
+                let arg2 = mp.register.pop().unwrap();
+                mp.register.push((arg1 > arg2) as i32);
+                println!("LOGICAL OP {:?} {:?} {:?}", arg1, line_code[1].label.clone().unwrap(), arg2);
+            }
+        }
+
+        if line_code[0].i == Some(OPCODE::JUMP_IF_FALSE as i32) {
+            //let address = line_code[1].label.clone().unwrap();
+            mp.pc = 3;
+            println!("JUMP TO {:?}", mp.pc);
+        }
+
         mp.move_pc();
+        println!("Register: {:?}", mp.register);
+        println!("Heap: {:?}", mp.heap);
+        println!();
     }
 
 }
@@ -133,7 +174,7 @@ mod test_process_manager {
         8   LOAD [result]
         9   LOAD [max]
         10  LOGICAL_OP [>]
-        11  JUMP_IF_FALSE 2
+        11  JUMP_IF_FALSE 4
         12  HALT
          */
         let mut pm = MedusaProcessManager::new();
@@ -150,12 +191,12 @@ mod test_process_manager {
         code.push(vec![OpcodeArgType{i: Some(2), label: None}, OpcodeArgType{i: None, label: Some("result".to_string())}]);
         code.push(vec![OpcodeArgType{i: Some(2), label: None}, OpcodeArgType{i: None, label: Some("max".to_string())}]);
         code.push(vec![OpcodeArgType{i: Some(7), label: None}, OpcodeArgType{i: None, label: Some(">".to_string())}]);
-        code.push(vec![OpcodeArgType{i: Some(9), label: None}, OpcodeArgType{i: Some(2), label: None}]);
+        code.push(vec![OpcodeArgType{i: Some(9), label: None}, OpcodeArgType{i: Some(4), label: None}]);
         code.push(vec![OpcodeArgType{i: Some(8), label: None}, OpcodeArgType{i: None, label: None}]);
         pm.spawn("add iter loop", code);
         pm.ps();
 
-        for _ in 1..5 {
+        for _ in 1..90 {
             pm.examine();
         }
 
