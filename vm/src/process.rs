@@ -1,10 +1,7 @@
 use std::collections::HashMap;
-use std::io::Read;
-use std::ops::Deref;
 use crate::object::{MedusaObj, DataType};
 use crate::ops::{OPCODE, OpcodeArgType};
 use crate::process::ProcessStatus::Zero;
-use crate::scheduler::MedusaScheduler;
 
 #[derive(Debug)]
 pub enum ProcessStatus {
