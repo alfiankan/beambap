@@ -1,24 +1,84 @@
 const std = @import("std");
 
-pub fn main() !void {
-    // Prints to stderr (it's a shortcut based on `std.io.getStdErr()`)
-    std.debug.print("All your {s} are belong to us.\n", .{"codebase"});
-
-    // stdout is for the actual output of your application, for example if you
-    // are implementing gzip, then only the compressed bytes should be sent to
-    // stdout, not any debugging messages.
-    const stdout_file = std.io.getStdOut().writer();
-    var bw = std.io.bufferedWriter(stdout_file);
-    const stdout = bw.writer();
-
-    try stdout.print("Run `zig build test` to run the tests.\n", .{});
-
-    try bw.flush(); // don't forget to flush!
+pub fn mem_name_to_uint64(word: []const u8) u8 {
+    var combined: u8 = 0;
+    for (word) |char| {
+        combined = (combined << 4) | char;
+    }
+    return combined;
 }
 
-test "simple test" {
-    var list = std.ArrayList(i32).init(std.testing.allocator);
-    defer list.deinit(); // try commenting this out and see if zig detects the memory leak!
-    try list.append(42);
-    try std.testing.expectEqual(@as(i32, 42), list.pop());
+test "create_byte_code" {
+
+    // 0   STORE i #0
+    // 1   STORE n #10
+    // 2   STORE r #0
+    // 3   PUSH r
+    // 4   PUSH #5
+    // 5   ADD
+    // 6   POP r
+    // 7   PUSH i
+    // 8   PUSH #1
+    // 9   ADD
+    // 10  POP i
+    // 11  PUSH i
+    // 12  PUSH n
+    // 13  CMP_LT 3
+    // 14  PUSH r
+    // 14  SYSCALL print
+
+    const Opcodes = enum(u8) {
+        NOP = 0,
+        STORE = 1,
+        PUSH = 2,
+        ADD = 3,
+        POP = 4,
+        CMP_LT = 5,
+        SYSCALL = 6,
+    };
+
+    const codes = [_]u8{
+        @intFromEnum(Opcodes.NOP),
+        @intFromEnum(Opcodes.STORE),
+        mem_name_to_uint64("i"),
+        0,
+        @intFromEnum(Opcodes.STORE),
+        mem_name_to_uint64("n"),
+        10,
+        @intFromEnum(Opcodes.STORE),
+        mem_name_to_uint64("r"),
+        0,
+        @intFromEnum(Opcodes.PUSH),
+        mem_name_to_uint64("r"),
+        @intFromEnum(Opcodes.PUSH),
+        5,
+        @intFromEnum(Opcodes.ADD),
+        @intFromEnum(Opcodes.POP),
+        mem_name_to_uint64("r"),
+        @intFromEnum(Opcodes.PUSH),
+        mem_name_to_uint64("i"),
+        @intFromEnum(Opcodes.PUSH),
+        1,
+        @intFromEnum(Opcodes.ADD),
+        @intFromEnum(Opcodes.POP),
+        mem_name_to_uint64("i"),
+        @intFromEnum(Opcodes.PUSH),
+        mem_name_to_uint64("i"),
+        @intFromEnum(Opcodes.PUSH),
+        mem_name_to_uint64("n"),
+        @intFromEnum(Opcodes.CMP_LT),
+        3,
+        @intFromEnum(Opcodes.PUSH),
+        mem_name_to_uint64("r"),
+        @intFromEnum(Opcodes.SYSCALL),
+    };
+
+    const file = try std.fs.cwd().createFile("add.bin", .{ .read = true });
+    defer file.close();
+
+    const writer = file.writer();
+
+    for (codes) |code| {
+        try writer.writeByte(code);
+    }
 }
