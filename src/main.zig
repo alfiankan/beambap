@@ -92,16 +92,28 @@ test "create_run_code" {
     var seq = std.ArrayList(u8).init(allocator);
     defer seq.deinit();
     var bytecode_builder = ByteCodeBuilder{ .sequence = &seq, .module_name = "main" };
-    try bytecode_builder.add_instruction(Opcodes.PUSH, &[_]u32{34});
-    try bytecode_builder.add_instruction(Opcodes.PUSH, &[_]u32{10});
+    try bytecode_builder.add_instruction(Opcodes.STORE, &[_]u32{ mem_name_to_uint32("i"), 0 });
+    try bytecode_builder.add_instruction(Opcodes.STORE, &[_]u32{ mem_name_to_uint32("r"), 0 });
+    try bytecode_builder.add_instruction(Opcodes.STORE, &[_]u32{ mem_name_to_uint32("n"), 15000000 });
+
+    try bytecode_builder.add_instruction(Opcodes.LOAD, &[_]u32{mem_name_to_uint32("r")});
+    try bytecode_builder.add_instruction(Opcodes.PUSH, &[_]u32{5});
     try bytecode_builder.add_instruction(Opcodes.ADD, &[_]u32{});
     try bytecode_builder.add_instruction(Opcodes.POP, &[_]u32{mem_name_to_uint32("r")});
-    try bytecode_builder.add_instruction(Opcodes.NOP, &[_]u32{});
-    try bytecode_builder.add_instruction(Opcodes.NOP, &[_]u32{});
-    try bytecode_builder.add_instruction(Opcodes.NOP, &[_]u32{});
-    try bytecode_builder.add_instruction(Opcodes.NOP, &[_]u32{});
-    try bytecode_builder.add_instruction(Opcodes.NOP, &[_]u32{});
-    try bytecode_builder.add_instruction(Opcodes.NOP, &[_]u32{});
+    try bytecode_builder.add_instruction(Opcodes.LOAD, &[_]u32{mem_name_to_uint32("i")});
+    try bytecode_builder.add_instruction(Opcodes.PUSH, &[_]u32{1});
+    try bytecode_builder.add_instruction(Opcodes.ADD, &[_]u32{});
+    try bytecode_builder.add_instruction(Opcodes.POP, &[_]u32{mem_name_to_uint32("i")});
+
+    // print step
+    //try bytecode_builder.add_instruction(Opcodes.LOAD, &[_]u32{mem_name_to_uint32("r")});
+    //try bytecode_builder.add_instruction(Opcodes.SYSCALL, &[_]u32{mem_name_to_uint32("print")});
+
+    try bytecode_builder.add_instruction(Opcodes.LOAD, &[_]u32{mem_name_to_uint32("i")});
+    try bytecode_builder.add_instruction(Opcodes.LOAD, &[_]u32{mem_name_to_uint32("n")});
+    try bytecode_builder.add_instruction(Opcodes.CMP_LT, &[_]u32{3});
+    try bytecode_builder.add_instruction(Opcodes.LOAD, &[_]u32{mem_name_to_uint32("r")});
+    try bytecode_builder.add_instruction(Opcodes.SYSCALL, &[_]u32{mem_name_to_uint32("print")});
 
     try bytecode_builder.write_bytecode_file();
 
